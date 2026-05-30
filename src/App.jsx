@@ -235,11 +235,11 @@ export default function App() {
   const materialTotals = useMemo(() => {
   const materials = {
     PLA: 0,
+    "PLA+": 0,
     PETG: 0,
     ABS: 0,
     ASA: 0,
     TPU: 0,
-    PLA+: 0,
   };
 
   filaments.forEach((filament) => {
@@ -263,7 +263,7 @@ export default function App() {
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Designed and built by Robin Armitage Version 1.7
+            Designed and built by Robin Armitage Version 1.8
           </p>
         </div>
 
@@ -330,17 +330,24 @@ export default function App() {
               }
             />
 
-            <input
-              className="border rounded-xl p-3"
-              placeholder="Material"
-              value={form.material}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  material: e.target.value,
-                }))
-              }
-            />
+          <select
+            value={form.material}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                material: e.target.value,
+              }))
+            }
+            className="border rounded-xl p-3"
+          >
+            <option value="">Material</option>
+            <option value="PLA">PLA</option>
+            <option value="PLA+">PLA+</option>
+            <option value="PETG">PETG</option>
+            <option value="ABS">ABS</option>
+            <option value="ASA">ASA</option>
+            <option value="TPU">TPU</option>
+          </select>
 
             <input
               className="border rounded-xl p-3"
