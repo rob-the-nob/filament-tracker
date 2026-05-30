@@ -239,6 +239,7 @@ export default function App() {
     ABS: 0,
     ASA: 0,
     TPU: 0,
+    PLA+: 0,
   };
 
   filaments.forEach((filament) => {
