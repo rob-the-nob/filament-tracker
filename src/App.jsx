@@ -27,7 +27,10 @@ export default function App() {
   const [usageInputs, setUsageInputs] = useState({});
   const [selectedFilament, setSelectedFilament] = useState(null);
   const [editingFilament, setEditingFilament] = useState(null);
+  const [addingWeight, setAddingWeight] = useState(null);
+  const [weightToAdd, setWeightToAdd] = useState("");
 
+  
   const colourMap = {
     Black: "#111827",
     White: "#e5e7eb",
@@ -135,6 +138,23 @@ export default function App() {
       return;
     }
 
+  const increaseFilament = async () => {
+    const amount = Number(weightToAdd);
+
+    if (!amount || amount <= 0) return;
+
+    await supabase
+      .from("filaments")
+      .update({
+        remaining: addingWeight.remaining + amount,
+      })
+      .eq("id", addingWeight.id);
+
+      setAddingWeight(null);
+      setWeightToAdd("");
+
+      loadFilaments();
+  };
     const updatedRemaining = Math.max(
       0,
       filament.remaining - amount
@@ -212,7 +232,7 @@ export default function App() {
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Cloud Synced Filament Inventory
+            Designed and built by Robin Armitage
           </p>
         </div>
 
@@ -496,6 +516,18 @@ export default function App() {
                           Edit
                         </button>
 
+                          <button
+                          onClick={() => {
+                            setAddingWeight(filament);
+                            setSelectedFilament(
+                              null
+                            );
+                          }}
+                          className="block w-full text-left px-4 py-3 hover:bg-gray-100"
+                        >
+                          Add Weight
+                        </button> 
+
                         <button
                           onClick={() =>
                             deleteFilament(
@@ -522,6 +554,49 @@ export default function App() {
           </table>
 
         </div>
+
+        {addingWeight && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
+
+      <h2 className="text-2xl font-bold">
+        Add Weight
+      </h2>
+
+      <input
+        type="number"
+        placeholder="Weight to add (g)"
+        value={weightToAdd}
+        onChange={(e) => setWeightToAdd(e.target.value)}
+        className="w-full border rounded-xl p-3"
+      />
+
+      <div className="flex justify-end gap-3">
+
+        <button
+          onClick={() => {
+            setAddingWeight(null);
+            setWeightToAdd("");
+          }}
+          className="border px-5 py-3 rounded-xl"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={increaseFilament}
+          className="bg-green-600 text-white px-5 py-3 rounded-xl"
+        >
+          Add
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+)}
+
+        
 
         {editingFilament && (
 
