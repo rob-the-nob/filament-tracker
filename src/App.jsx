@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+
+import { supabase } from "./supabase";
 import {
   ResponsiveContainer,
   BarChart,
@@ -13,29 +15,18 @@ import {
 
 export default function App() {
   const [filaments, setFilaments] = useState([]);
-  const [selectedFilament, setSelectedFilament] = useState(null);
-  const [editingFilament, setEditingFilament] = useState(null);
-  const [logViewer, setLogViewer] = useState(null);
-  const [editLogs, setEditLogs] = useState([]);
-
-  const [filters, setFilters] = useState({
-    material: "All",
-    colour: "All",
-    effect: "All",
-    minRemaining: 0,
-    maxRemaining: 1000,
-  });
-
   const [form, setForm] = useState({
     name: "",
     colour: "",
     material: "",
     effect: "",
-    netWeight: "",
-    spoolWeight: "",
+    netweight: "",
+    spoolweight: "",
   });
 
   const [usageInputs, setUsageInputs] = useState({});
+  const [selectedFilament, setSelectedFilament] = useState(null);
+  const [editingFilament, setEditingFilament] = useState(null);
 
   const colourMap = {
     Black: "#111827",
@@ -48,212 +39,165 @@ export default function App() {
     Purple: "#a855f7",
     Pink: "#ec4899",
     Gray: "#6b7280",
-    Grey: "#6b7280",
-    Brown: "#92400e",
     Gold: "#facc15",
     Silver: "#9ca3af",
   };
 
-  const addEditLog = (filamentId, filamentName, action, details) => {
-    setEditLogs((prev) => [
-      {
-        id: Date.now(),
-        filamentId,
-        filamentName,
-        action,
-        details,
-        timestamp: new Date().toLocaleString(),
-      },
-      ...prev,
-    ]);
+  const loadFilaments = async () => {
+    const { data, error } = await supabase
+      .from("filaments")
+      .select("*")
+      .order("remaining", { ascending: false });
+
+    console.log(data);
+    console.log(error);
+
+    if (!error && data) {
+      setFilaments(data);
+    }
   };
 
-  const addFilament = () => {
-    const netWeight = Number(form.netWeight);
-    const spoolWeight = Number(form.spoolWeight);
+  useEffect(() => {
+    loadFilaments();
+  }, []);
 
-    if (
-      !form.name ||
-      !form.colour ||
-      !form.material ||
-      !form.effect ||
-      !netWeight ||
-      !spoolWeight ||
-      netWeight <= spoolWeight
-    ) {
-      return;
-    }
+  useEffect(() => {
+    const channel = supabase
+      .channel("filaments-live")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "filaments",
+        },
+        () => {
+          loadFilaments();
+        }
+      )
+      .subscribe();
 
-    const newFilament = {
-      id: Date.now(),
-      name: form.name,
-      colour: form.colour,
-      material: form.material,
-      effect: form.effect,
-      netWeight,
-      spoolWeight,
-      remaining: netWeight - spoolWeight,
+    return () => {
+      supabase.removeChannel(channel);
     };
+  }, []);
 
-    setFilaments((prev) => [...prev, newFilament]);
+  const addFilament = async () => {
+  const netweight = Number(form.netweight);
+  const spoolweight = Number(form.spoolweight);
 
-    addEditLog(
-      newFilament.id,
-      newFilament.name,
-      "Created",
-      "Filament added"
-    );
+  if (
+    !form.name ||
+    !form.colour ||
+    !form.material ||
+    !form.effect ||
+    !netweight ||
+    !spoolweight
+  ) {
+    return;
+  }
 
+  const newFilament = {
+    id: Date.now(),
+    name: form.name,
+    colour: form.colour,
+    material: form.material,
+    effect: form.effect,
+    netweight,
+    spoolweight,
+    remaining: netweight - spoolweight,
+  };
+
+  const { error } = await supabase
+    .from("filaments")
+    .insert([newFilament]);
+
+  if (!error) {
     setForm({
       name: "",
       colour: "",
       material: "",
       effect: "",
-      netWeight: "",
-      spoolWeight: "",
+      netweight: "",
+      spoolweight: "",
     });
-  };
 
-  const decreaseFilament = (id) => {
-    const amount = Number(usageInputs[id]);
+    loadFilaments();
+  } else {
+    console.log(error);
+  }
+};
+
+  const decreaseFilament = async (filament) => {
+    const amount = Number(usageInputs[filament.id]);
 
     if (!amount || amount <= 0) {
       return;
     }
 
-    setFilaments((prev) =>
-      prev.map((filament) => {
-        if (filament.id !== id) {
-          return filament;
-        }
-
-        const updatedRemaining = Math.max(
-          0,
-          filament.remaining - amount
-        );
-
-        addEditLog(
-          filament.id,
-          filament.name,
-          "Usage Updated",
-          `${amount}g used`
-        );
-
-        return {
-          ...filament,
-          remaining: updatedRemaining,
-        };
-      })
+    const updatedRemaining = Math.max(
+      0,
+      filament.remaining - amount
     );
+
+    await supabase
+      .from("filaments")
+      .update({
+        remaining: updatedRemaining,
+      })
+      .eq("id", filament.id);
 
     setUsageInputs((prev) => ({
       ...prev,
-      [id]: "",
+      [filament.id]: "",
     }));
+
+    loadFilaments();
   };
 
-  const deleteFilament = (id) => {
-    const filament = filaments.find((f) => f.id === id);
+  const deleteFilament = async (id) => {
+    await supabase
+      .from("filaments")
+      .delete()
+      .eq("id", id);
 
-    if (!filament) {
-      return;
-    }
-
-    addEditLog(filament.id, filament.name, "Deleted", "Filament deleted");
-
-    setFilaments((prev) => prev.filter((f) => f.id !== id));
     setSelectedFilament(null);
+
+    loadFilaments();
   };
 
-  const saveEdit = () => {
-    if (!editingFilament) {
-      return;
-    }
-
-    const netWeight = Number(editingFilament.netWeight);
-    const spoolWeight = Number(editingFilament.spoolWeight);
-
-    if (netWeight <= spoolWeight) {
-      return;
-    }
-
-    setFilaments((prev) =>
-      prev.map((filament) => {
-        if (filament.id !== editingFilament.id) {
-          return filament;
-        }
-
-        return {
-          ...editingFilament,
-          netWeight,
-          spoolWeight,
-          remaining: netWeight - spoolWeight,
-        };
+  const saveEdit = async () => {
+    await supabase
+      .from("filaments")
+      .update({
+        name: editingFilament.name,
+        colour: editingFilament.colour,
+        material: editingFilament.material,
+        effect: editingFilament.effect,
+        netweight: Number(editingFilament.netweight),
+        spoolweight: Number(editingFilament.spoolweight),
+        remaining:
+          Number(editingFilament.netweight) -
+          Number(editingFilament.spoolweight),
       })
-    );
-
-    addEditLog(
-      editingFilament.id,
-      editingFilament.name,
-      "Edited",
-      "Filament updated"
-    );
+      .eq("id", editingFilament.id);
 
     setEditingFilament(null);
+
+    loadFilaments();
   };
 
-  const totalRemaining = useMemo(
-    () => filaments.reduce((sum, filament) => sum + filament.remaining, 0),
-    [filaments]
-  );
+  const totalRemaining = useMemo(() => {
+    return filaments.reduce(
+      (sum, filament) => sum + filament.remaining,
+      0
+    );
+  }, [filaments]);
 
   const totalSpools = filaments.length;
 
-  const lowStock = useMemo(
-    () => filaments.filter((filament) => filament.remaining < 200),
-    [filaments]
-  );
-
-  const sortedFilaments = useMemo(
-    () => [...filaments].sort((a, b) => b.remaining - a.remaining),
-    [filaments]
-  );
-
-  const uniqueMaterials = [
-    "All",
-    ...new Set(filaments.map((f) => f.material)),
-  ];
-
-  const uniqueColours = [
-    "All",
-    ...new Set(filaments.map((f) => f.colour)),
-  ];
-
-  const uniqueEffects = [
-    "All",
-    ...new Set(filaments.map((f) => f.effect)),
-  ];
-
-  const filteredFilaments = sortedFilaments.filter((filament) => {
-    const materialMatch =
-      filters.material === "All" ||
-      filament.material === filters.material;
-
-    const colourMatch =
-      filters.colour === "All" || filament.colour === filters.colour;
-
-    const effectMatch =
-      filters.effect === "All" || filament.effect === filters.effect;
-
-    const weightMatch =
-      filament.remaining >= filters.minRemaining &&
-      filament.remaining <= filters.maxRemaining;
-
-    return materialMatch && colourMatch && effectMatch && weightMatch;
-  });
-
-  const chartData = filteredFilaments.map((filament) => ({
-    filament: `${filament.name} ${filament.colour}`,
+  const chartData = filaments.map((filament) => ({
+    filament: filament.name,
     remaining: filament.remaining,
     colour: colourMap[filament.colour] || "#6366f1",
   }));
@@ -261,43 +205,58 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+
         <div>
           <h1 className="text-4xl font-bold">
             3D Printer Filament Tracker
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Manage and track your filament inventory.
+            Cloud Synced Filament Inventory
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
+
           <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="text-sm text-gray-500">Total Remaining</h2>
-            <p className="text-3xl font-bold mt-2">{totalRemaining}g</p>
+            <h2 className="text-sm text-gray-500">
+              Total Remaining
+            </h2>
+
+            <p className="text-3xl font-bold mt-2">
+              {totalRemaining}g
+            </p>
           </div>
 
           <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="text-sm text-gray-500">Total Spools</h2>
-            <p className="text-3xl font-bold mt-2">{totalSpools}</p>
+            <h2 className="text-sm text-gray-500">
+              Total Spools
+            </h2>
+
+            <p className="text-3xl font-bold mt-2">
+              {totalSpools}
+            </p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="text-sm text-gray-500">Low Stock Rolls</h2>
-            <p className="text-3xl font-bold mt-2">{lowStock.length}</p>
-          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
-          <h2 className="text-2xl font-semibold mb-4">Add Filament</h2>
+
+          <h2 className="text-2xl font-semibold mb-4">
+            Add Filament
+          </h2>
 
           <div className="grid md:grid-cols-6 gap-4">
+
             <input
               className="border rounded-xl p-3"
               placeholder="Name"
               value={form.name}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, name: e.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  name: e.target.value,
+                }))
               }
             />
 
@@ -306,7 +265,10 @@ export default function App() {
               placeholder="Colour"
               value={form.colour}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, colour: e.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  colour: e.target.value,
+                }))
               }
             />
 
@@ -315,7 +277,10 @@ export default function App() {
               placeholder="Material"
               value={form.material}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, material: e.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  material: e.target.value,
+                }))
               }
             />
 
@@ -324,7 +289,10 @@ export default function App() {
               placeholder="Effect"
               value={form.effect}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, effect: e.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  effect: e.target.value,
+                }))
               }
             />
 
@@ -332,9 +300,12 @@ export default function App() {
               type="number"
               className="border rounded-xl p-3"
               placeholder="Net Weight"
-              value={form.netWeight}
+              value={form.netweight}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, netWeight: e.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  netweight: e.target.value,
+                }))
               }
             />
 
@@ -342,172 +313,155 @@ export default function App() {
               type="number"
               className="border rounded-xl p-3"
               placeholder="Spool Weight"
-              value={form.spoolWeight}
+              value={form.spoolweight}
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, spoolWeight: e.target.value }))
+                setForm((prev) => ({
+                  ...prev,
+                  spoolweight: e.target.value,
+                }))
               }
             />
+
           </div>
 
-          <button
-            onClick={addFilament}
-            className="mt-4 bg-black text-white px-6 py-3 rounded-xl"
-          >
-            Add Filament
-          </button>
+         <button
+          onClick={addFilament}
+          
+
+
+          className="mt-4 bg-black text-white px-3 py-6 rounded-xl"
+        >
+          Add Filament
+        </button>
+
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
-          <div className="flex flex-nowrap gap-4 overflow-x-auto pb-2">
-            <select
-              value={filters.material}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  material: e.target.value,
-                }))
-              }
-              className="border rounded-xl p-3 min-w-[180px]"
-            >
-              {uniqueMaterials.map((material) => (
-                <option key={material}>{material}</option>
-              ))}
-            </select>
 
-            <select
-              value={filters.colour}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  colour: e.target.value,
-                }))
-              }
-              className="border rounded-xl p-3 min-w-[180px]"
-            >
-              {uniqueColours.map((colour) => (
-                <option key={colour}>{colour}</option>
-              ))}
-            </select>
+          <div className="h-96">
 
-            <select
-              value={filters.effect}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  effect: e.target.value,
-                }))
-              }
-              className="border rounded-xl p-3 min-w-[180px]"
-            >
-              {uniqueEffects.map((effect) => (
-                <option key={effect}>{effect}</option>
-              ))}
-            </select>
-
-            <input
-              type="number"
-              placeholder="Min Weight"
-              className="border rounded-xl p-3 min-w-[180px]"
-              value={filters.minRemaining}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  minRemaining: Number(e.target.value),
-                }))
-              }
-            />
-
-            <input
-              type="number"
-              placeholder="Max Weight"
-              className="border rounded-xl p-3 min-w-[180px]"
-              value={filters.maxRemaining}
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  maxRemaining: Number(e.target.value),
-                }))
-              }
-            />
-          </div>
-
-          <div className="h-96 mt-6">
             <ResponsiveContainer width="100%" height="100%">
+
               <BarChart data={chartData}>
+
                 <CartesianGrid strokeDasharray="3 3" />
+
                 <XAxis dataKey="filament" />
+
                 <YAxis />
+
                 <Tooltip />
+
                 <Legend />
 
                 <Bar dataKey="remaining" name="Remaining (g)">
+
                   {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.colour} />
+                    <Cell
+                      key={index}
+                      fill={entry.colour}
+                    />
                   ))}
+
                 </Bar>
+
               </BarChart>
+
             </ResponsiveContainer>
+
           </div>
+
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6 overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+
+          <table className="w-full">
+
             <thead>
+
               <tr className="border-b text-left">
+
                 <th className="p-3">Name</th>
                 <th className="p-3">Colour</th>
                 <th className="p-3">Material</th>
                 <th className="p-3">Effect</th>
-                <th className="p-3">Net</th>
-                <th className="p-3">Spool</th>
                 <th className="p-3">Remaining</th>
-                <th className="p-3">Decrease</th>
+                <th className="p-3">Use</th>
                 <th className="p-3">Menu</th>
+
               </tr>
+
             </thead>
 
             <tbody>
-              {filteredFilaments.map((filament) => (
-                <tr key={filament.id} className="border-b">
-                  <td className="p-3">{filament.name}</td>
-                  <td className="p-3">{filament.colour}</td>
-                  <td className="p-3">{filament.material}</td>
-                  <td className="p-3">{filament.effect}</td>
-                  <td className="p-3">{filament.netWeight}g</td>
-                  <td className="p-3">{filament.spoolWeight}g</td>
+
+              {filaments.map((filament) => (
+
+                <tr
+                  key={filament.id}
+                  className="border-b"
+                >
+
+                  <td className="p-3">
+                    {filament.name}
+                  </td>
+
+                  <td className="p-3">
+                    {filament.colour}
+                  </td>
+
+                  <td className="p-3">
+                    {filament.material}
+                  </td>
+
+                  <td className="p-3">
+                    {filament.effect}
+                  </td>
+
                   <td className="p-3 font-bold">
                     {filament.remaining}g
                   </td>
 
                   <td className="p-3">
+
                     <div className="flex gap-2">
+
                       <input
                         type="number"
                         placeholder="Used"
-                        value={usageInputs[filament.id] || ""}
+                        value={
+                          usageInputs[filament.id] || ""
+                        }
                         onChange={(e) =>
                           setUsageInputs((prev) => ({
                             ...prev,
-                            [filament.id]: e.target.value,
+                            [filament.id]:
+                              e.target.value,
                           }))
                         }
                         className="border rounded-xl p-2 w-24"
                       />
 
                       <button
-                        onClick={() => decreaseFilament(filament.id)}
+                        onClick={() =>
+                          decreaseFilament(filament)
+                        }
                         className="bg-red-500 text-white px-4 rounded-xl"
                       >
                         Update
                       </button>
+
                     </div>
+
                   </td>
 
                   <td className="p-3 relative">
+
                     <button
                       onClick={() =>
                         setSelectedFilament(
-                          selectedFilament === filament.id
+                          selectedFilament ===
+                            filament.id
                             ? null
                             : filament.id
                         )
@@ -517,12 +471,20 @@ export default function App() {
                       ⋮
                     </button>
 
-                    {selectedFilament === filament.id && (
-                      <div className="absolute right-0 mt-2 bg-white border shadow rounded-xl w-52 z-50">
+                    {selectedFilament ===
+                      filament.id && (
+
+                      <div className="absolute right-0 mt-2 bg-white border shadow rounded-xl w-40 z-50">
+
                         <button
                           onClick={() => {
-                            setEditingFilament({ ...filament });
-                            setSelectedFilament(null);
+                            setEditingFilament({
+                              ...filament,
+                            });
+
+                            setSelectedFilament(
+                              null
+                            );
                           }}
                           className="block w-full text-left px-4 py-3 hover:bg-gray-100"
                         >
@@ -530,36 +492,44 @@ export default function App() {
                         </button>
 
                         <button
-                          onClick={() => deleteFilament(filament.id)}
+                          onClick={() =>
+                            deleteFilament(
+                              filament.id
+                            )
+                          }
                           className="block w-full text-left px-4 py-3 hover:bg-gray-100 text-red-600"
                         >
                           Delete
                         </button>
 
-                        <button
-                          onClick={() => {
-                            setLogViewer(filament.id);
-                            setSelectedFilament(null);
-                          }}
-                          className="block w-full text-left px-4 py-3 hover:bg-gray-100"
-                        >
-                          View Edit Logs
-                        </button>
                       </div>
+
                     )}
+
                   </td>
+
                 </tr>
+
               ))}
+
             </tbody>
+
           </table>
+
         </div>
 
         {editingFilament && (
+
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
             <div className="bg-white rounded-2xl p-6 w-full max-w-2xl space-y-4">
-              <h2 className="text-2xl font-bold">Edit Filament</h2>
+
+              <h2 className="text-2xl font-bold">
+                Edit Filament
+              </h2>
 
               <div className="grid grid-cols-2 gap-4">
+
                 <input
                   className="border rounded-xl p-3"
                   value={editingFilament.name}
@@ -607,11 +577,11 @@ export default function App() {
                 <input
                   type="number"
                   className="border rounded-xl p-3"
-                  value={editingFilament.netWeight}
+                  value={editingFilament.netweight}
                   onChange={(e) =>
                     setEditingFilament((prev) => ({
                       ...prev,
-                      netWeight: e.target.value,
+                      netweight: e.target.value,
                     }))
                   }
                 />
@@ -619,19 +589,23 @@ export default function App() {
                 <input
                   type="number"
                   className="border rounded-xl p-3"
-                  value={editingFilament.spoolWeight}
+                  value={editingFilament.spoolweight}
                   onChange={(e) =>
                     setEditingFilament((prev) => ({
                       ...prev,
-                      spoolWeight: e.target.value,
+                      spoolweight: e.target.value,
                     }))
                   }
                 />
+
               </div>
 
               <div className="flex justify-end gap-3">
+
                 <button
-                  onClick={() => setEditingFilament(null)}
+                  onClick={() =>
+                    setEditingFilament(null)
+                  }
                   className="border px-5 py-3 rounded-xl"
                 >
                   Cancel
@@ -643,47 +617,15 @@ export default function App() {
                 >
                   Save
                 </button>
+
               </div>
+
             </div>
+
           </div>
+
         )}
 
-        {logViewer && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">Edit Logs</h2>
-
-                <button
-                  onClick={() => setLogViewer(null)}
-                  className="border px-4 py-2 rounded-xl"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {editLogs
-                  .filter((log) => log.filamentId === logViewer)
-                  .map((log) => (
-                    <div
-                      key={log.id}
-                      className="border rounded-xl p-4 bg-gray-50"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">{log.action}</span>
-                        <span className="text-sm text-gray-500">
-                          {log.timestamp}
-                        </span>
-                      </div>
-
-                      <p className="mt-2">{log.details}</p>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
