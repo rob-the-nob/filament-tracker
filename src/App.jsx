@@ -30,7 +30,7 @@ export default function App() {
   const [addingWeight, setAddingWeight] = useState(null);
   const [weightToAdd, setWeightToAdd] = useState("");
 
-  
+
   const colourMap = {
     Black: "#111827",
     White: "#e5e7eb",
@@ -44,6 +44,7 @@ export default function App() {
     Gray: "#6b7280",
     Gold: "#facc15",
     Silver: "#9ca3af",
+    Brown: "#964B00",
   };
 
   const loadFilaments = async () => {
@@ -138,23 +139,8 @@ export default function App() {
       return;
     }
 
-  const increaseFilament = async () => {
-    const amount = Number(weightToAdd);
 
-    if (!amount || amount <= 0) return;
 
-    await supabase
-      .from("filaments")
-      .update({
-        remaining: addingWeight.remaining + amount,
-      })
-      .eq("id", addingWeight.id);
-
-      setAddingWeight(null);
-      setWeightToAdd("");
-
-      loadFilaments();
-  };
     const updatedRemaining = Math.max(
       0,
       filament.remaining - amount
@@ -174,6 +160,30 @@ export default function App() {
 
     loadFilaments();
   };
+
+  const increaseFilament = async () => {
+  const amount = Number(weightToAdd);
+
+  if (!amount || amount <= 0) {
+    console.log("Invalid amount");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("filaments")
+    .update({
+      remaining: Number(addingWeight.remaining) + amount,
+    })
+    .eq("id", addingWeight.id)
+    .select();
+
+  if (!error) {
+    loadFilaments();
+    setAddingWeight(null);
+    setWeightToAdd("");
+  }
+};
+
 
   const deleteFilament = async (id) => {
     await supabase
@@ -222,6 +232,26 @@ export default function App() {
     colour: colourMap[filament.colour] || "#6366f1",
   }));
 
+  const materialTotals = useMemo(() => {
+  const materials = {
+    PLA: 0,
+    PETG: 0,
+    ABS: 0,
+    ASA: 0,
+    TPU: 0,
+  };
+
+  filaments.forEach((filament) => {
+    const material = filament.material?.toUpperCase();
+
+    if (materials.hasOwnProperty(material)) {
+      materials[material]++;
+    }
+  });
+
+  return materials;
+}, [filaments]);
+  
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -236,29 +266,36 @@ export default function App() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+       <div className="grid md:grid-cols-4 gap-4">
 
-          <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="text-sm text-gray-500">
-              Total Remaining
-            </h2>
+  <div className="bg-white rounded-2xl shadow p-6">
+    <h2 className="text-sm text-gray-500">
+      Total Spools
+    </h2>
 
-            <p className="text-3xl font-bold mt-2">
-              {totalRemaining}g
-            </p>
-          </div>
+    <p className="text-3xl font-bold mt-2">
+      {totalSpools}
+    </p>
+  </div>
 
-          <div className="bg-white rounded-2xl shadow p-6">
-            <h2 className="text-sm text-gray-500">
-              Total Spools
-            </h2>
+  {Object.entries(materialTotals).map(
+    ([material, total]) => (
+      <div
+        key={material}
+        className="bg-white rounded-2xl shadow p-6"
+      >
+        <h2 className="text-sm text-gray-500">
+          {material}
+        </h2>
 
-            <p className="text-3xl font-bold mt-2">
-              {totalSpools}
-            </p>
-          </div>
+        <p className="text-3xl font-bold mt-2">
+          {total} Spools
+        </p>
+      </div>
+    )
+  )}
 
-        </div>
+</div>
 
         <div className="bg-white rounded-2xl shadow p-6">
 
@@ -568,7 +605,6 @@ export default function App() {
         placeholder="Weight to add (g)"
         value={weightToAdd}
         onChange={(e) => setWeightToAdd(e.target.value)}
-        className="w-full border rounded-xl p-3"
       />
 
       <div className="flex justify-end gap-3">
