@@ -208,7 +208,7 @@ export default function App() {
 
         <div>
           <h1 className="text-4xl font-bold">
-            3D Printer Filament Tracker
+            Stewart&apos;s Filament Tracker™
           </h1>
 
           <p className="text-gray-600 mt-2">
