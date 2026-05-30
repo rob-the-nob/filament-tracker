@@ -263,7 +263,7 @@ export default function App() {
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Designed and built by Robin Armitage
+            Designed and built by Robin Armitage Version 1.7
           </p>
         </div>
 
