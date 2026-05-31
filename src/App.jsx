@@ -41,7 +41,7 @@ export default function App() {
     Orange: "#f97316",
     Purple: "#a855f7",
     Pink: "#ec4899",
-    Gray: "#6b7280",
+    Grey: "#6b7280",
     Gold: "#facc15",
     Silver: "#9ca3af",
     Brown: "#964B00",
@@ -264,7 +264,7 @@ export default function App() {
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Designed and built by Robin Armitage Version 1.8
+            Designed and built by Robin Armitage Version 1.9
           </p>
         </div>
 
