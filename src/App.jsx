@@ -288,14 +288,26 @@ const CustomTooltip = ({ active, payload }) => {
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        <div>
-          <h1 className="text-4xl font-bold">
-            Stewart&apos;s Filament Tracker™
-          </h1>
+        <div className="flex items-center gap-4">
+        
+         <img
+            src="/favicon.png"
+            alt="Logo"
+            className="w-30 h-30"
+          />
 
-          <p className="text-gray-600 mt-2">
-            Designed and built by Robin Armitage
-          </p>
+          <div>
+            <h1 className="text-4xl font-bold">
+              Stewart&apos;s Filament Tracker™
+            </h1>
+
+            <p className="text-sm font-mediunm text-gray-600">
+              Designed and built by Robin Armitage
+            </p>  
+          </div>
+
+         
+
         </div>
 
        <div className="grid md:grid-cols-4 gap-4">
@@ -451,7 +463,7 @@ const CustomTooltip = ({ active, payload }) => {
                 />
                 
 
-                <Tooltip content={<CustomToolTip />} />
+                <Tooltip content={<CustomTooltip />} />
 
                 <Legend />
 
