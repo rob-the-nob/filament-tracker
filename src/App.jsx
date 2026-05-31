@@ -255,6 +255,35 @@ export default function App() {
   return materials;
 }, [filaments]);
   
+
+
+const CustomTooltip = ({ active, payload }) => {
+  if (!active || !payload || !payload.length) {
+    return null;
+  }
+
+  const filament = filaments.find(
+    (f) => f.name === payload[0].payload.filament
+  );
+
+  return (
+    <div className="bg-white border shadow-lg rounded-xl p-3">
+      <p className="font-bold">
+        Name: {filament?.name}
+      </p>
+
+      <p>
+        Material: {filament?.material}
+      </p>
+
+      <p>
+        Remaining: {filament?.remaining}g
+      </p>
+    </div>
+  );
+};
+
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -422,7 +451,7 @@ export default function App() {
                 />
                 
 
-                <Tooltip />
+                <Tooltip content={<CustomToolTip />} />
 
                 <Legend />
 
