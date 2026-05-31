@@ -298,7 +298,7 @@ const CustomTooltip = ({ active, payload }) => {
 
           <div>
             <h1 className="text-4xl font-bold">
-              Stewart&apos;s Filament Tracker™
+              Stewart&apos;s Filament Tracker
             </h1>
 
             <p className="text-sm font-mediunm text-gray-600">
