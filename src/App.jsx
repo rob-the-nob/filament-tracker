@@ -46,6 +46,7 @@ export default function App() {
     Silver: "#9ca3af",
     Brown: "#964B00",
     "Light Blue": "#60a5fa",
+    Clear: "#d1d5db",
   };
 
   const loadFilaments = async () => {
@@ -165,7 +166,7 @@ export default function App() {
   const increaseFilament = async () => {
   const amount = Number(weightToAdd);
 
-  if (!amount || amount <= 0) {
+  if (!amount || amount <= -1){
     console.log("Invalid amount");
     return;
   }
@@ -264,7 +265,7 @@ export default function App() {
           </h1>
 
           <p className="text-gray-600 mt-2">
-            Designed and built by Robin Armitage Version 1.9
+            Designed and built by Robin Armitage
           </p>
         </div>
 
@@ -415,8 +416,8 @@ export default function App() {
                 <XAxis dataKey="filament" />
 
                 <YAxis 
-                  domain={[0, 1000]}
-                  ticks={[0,100,200,300,400,500,600,700,800,900,1000]}
+                  domain={[0, 1100]}
+                  ticks={[0,100,200,300,400,500,600,700,800,900,1000,1100]}
                   interval={0}
                 />
                 
