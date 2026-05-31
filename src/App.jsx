@@ -45,7 +45,7 @@ export default function App() {
     Gold: "#facc15",
     Silver: "#9ca3af",
     Brown: "#964B00",
-    Light Blue: "#60a5fa",
+    "Light Blue": "#60a5fa",
   };
 
   const loadFilaments = async () => {
