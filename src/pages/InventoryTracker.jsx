@@ -6,9 +6,11 @@ export default function InventoryTracker() {
   const [items, setItems] = useState([]);
 
   const [barcode, setBarcode] = useState("");
-  const [mode, setMode] = useState("remove"); // add | remove
+  const [mode, setMode] = useState("remove");
 
   const [scannerOpen, setScannerOpen] = useState(false);
+
+  const [editing, setEditing] = useState(null);
 
   // ---------------- LOAD ----------------
   const loadItems = async () => {
@@ -24,7 +26,7 @@ export default function InventoryTracker() {
     loadItems();
   }, []);
 
-  // ---------------- GROUP BY CATEGORY ----------------
+  // ---------------- GROUP ----------------
   const grouped = useMemo(() => {
     const groups = {};
 
@@ -38,7 +40,7 @@ export default function InventoryTracker() {
     return groups;
   }, [items]);
 
-  // ---------------- PROCESS BARCODE ----------------
+  // ---------------- BARCODE ACTION ----------------
   const processBarcode = async () => {
     if (!barcode) return;
 
@@ -65,12 +67,36 @@ export default function InventoryTracker() {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      processBarcode();
-    }
+    if (e.key === "Enter") processBarcode();
   };
 
-  // ---------------- CAMERA SCANNER ----------------
+  // ---------------- DELETE ----------------
+  const deleteItem = async (id) => {
+    await supabase.from("inventory").delete().eq("id", id);
+    loadItems();
+  };
+
+  // ---------------- EDIT ----------------
+  const saveEdit = async () => {
+    await supabase
+      .from("inventory")
+      .update({
+        name: editing.name,
+        barcode: Number(editing.barcode),
+        category: editing.category,
+        price: Number(editing.price),
+        retail_cost: Number(editing.retail_cost),
+        quantity: Number(editing.quantity),
+        location: editing.location,
+        notes: editing.notes,
+      })
+      .eq("id", editing.id);
+
+    setEditing(null);
+    loadItems();
+  };
+
+  // ---------------- CAMERA ----------------
   const startScanner = () => {
     setScannerOpen(true);
 
@@ -104,7 +130,7 @@ export default function InventoryTracker() {
       {/* CONTROL BAR */}
       <div className="bg-white rounded-2xl shadow p-6 space-y-4">
 
-        {/* ADD / REMOVE TOGGLE */}
+        {/* MODE */}
         <div className="flex rounded-xl overflow-hidden w-fit shadow">
           <button
             onClick={() => setMode("add")}
@@ -129,7 +155,7 @@ export default function InventoryTracker() {
           </button>
         </div>
 
-        {/* BARCODE INPUT + CAMERA */}
+        {/* BARCODE */}
         <div className="flex gap-2">
           <input
             className="border rounded-xl p-3 flex-1"
@@ -162,7 +188,6 @@ export default function InventoryTracker() {
           className="bg-white rounded-2xl shadow overflow-hidden"
         >
 
-          {/* CATEGORY HEADER */}
           <div className="p-4 bg-gray-50 font-bold text-lg">
             {category}
           </div>
@@ -178,6 +203,7 @@ export default function InventoryTracker() {
                 <th>Retail</th>
                 <th>Location</th>
                 <th>Notes</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
@@ -193,24 +219,80 @@ export default function InventoryTracker() {
                   <td>{i.location}</td>
                   <td>{i.notes}</td>
 
+                  <td className="flex gap-2 p-2">
+
+                    <button
+                      onClick={() => setEditing(i)}
+                      className="bg-yellow-400 px-3 py-1 rounded-xl"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => deleteItem(i.id)}
+                      className="bg-red-500 text-white px-3 py-1 rounded-xl"
+                    >
+                      Delete
+                    </button>
+
+                  </td>
+
                 </tr>
               ))}
             </tbody>
 
           </table>
-
         </div>
       ))}
 
-      {/* CAMERA MODAL */}
+      {/* EDIT MODAL */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+          <div className="bg-white p-6 rounded-2xl w-[500px] space-y-2">
+
+            <h2 className="text-xl font-bold">Edit Item</h2>
+
+            {Object.keys(editing).map((key) =>
+              key !== "id" ? (
+                <input
+                  key={key}
+                  className="border p-2 rounded-xl w-full"
+                  value={editing[key] ?? ""}
+                  onChange={(e) =>
+                    setEditing({ ...editing, [key]: e.target.value })
+                  }
+                  placeholder={key}
+                />
+              ) : null
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+
+              <button onClick={() => setEditing(null)}>
+                Cancel
+              </button>
+
+              <button
+                onClick={saveEdit}
+                className="bg-black text-white px-4 py-2 rounded-xl"
+              >
+                Save
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* CAMERA */}
       {scannerOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
 
           <div className="bg-white p-4 rounded-2xl w-[90%] max-w-md">
 
-            <h2 className="text-xl font-bold mb-2">
-              Scan Barcode
-            </h2>
+            <h2 className="text-xl font-bold mb-2">Scan Barcode</h2>
 
             <div id="reader" className="w-full"></div>
 
