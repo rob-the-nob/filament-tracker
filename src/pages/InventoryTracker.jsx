@@ -7,10 +7,48 @@ export default function InventoryTracker() {
 
   const [barcode, setBarcode] = useState("");
   const [mode, setMode] = useState("remove");
-
   const [scannerOpen, setScannerOpen] = useState(false);
-
   const [editing, setEditing] = useState(null);
+
+  const [form, setForm] = useState({
+    name: "",
+    barcode: "",
+    category: "",
+    price: "",
+    retail_cost: "",
+    quantity: "",
+    location: "",
+    notes: "",
+  });
+
+  // ---------------- DROPDOWNS ----------------
+  const categories = [
+    "Electronics",
+    "Tools",
+    "3D Printing",
+    "Packaging",
+    "Office",
+    "Raw Materials",
+    "Other",
+  ];
+
+  const locations = [
+    "Main Store",
+    "Warehouse",
+    "Shelf A",
+    "Shelf B",
+    "Drawer 1",
+    "Drawer 2",
+    "Workshop",
+  ];
+
+  // ---------------- Barcode Genneration ----------------
+  const generateBarcode = () => {
+    const time = Date.now().toString(); // unique base
+    const random = Math.floor(100 + Math.random() * 900); // 3-digit safety
+
+    return Number(time.slice(-6) + random); // keep it numeric + short-ish
+  };
 
   // ---------------- LOAD ----------------
   const loadItems = async () => {
@@ -26,21 +64,56 @@ export default function InventoryTracker() {
     loadItems();
   }, []);
 
+  // ---------------- FEEDBACK ----------------
+  const feedback = () => {
+    if (navigator.vibrate) navigator.vibrate(120);
+
+    const audio = new Audio(
+      "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
+    );
+    audio.play();
+  };
+
   // ---------------- GROUP ----------------
   const grouped = useMemo(() => {
-    const groups = {};
+    const g = {};
 
-    items.forEach((item) => {
-      const cat = item.category || "Uncategorised";
-
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
+    items.forEach((i) => {
+      const cat = i.category || "Uncategorised";
+      if (!g[cat]) g[cat] = [];
+      g[cat].push(i);
     });
 
-    return groups;
+    return g;
   }, [items]);
 
-  // ---------------- BARCODE ACTION ----------------
+  // ---------------- ADD ITEM ----------------
+  const addItem = async () => {
+    await supabase.from("inventory").insert([
+      {
+        ...form,
+        barcode: Number(form.barcode),
+        price: Number(form.price),
+        retail_cost: Number(form.retail_cost),
+        quantity: Number(form.quantity),
+      },
+    ]);
+
+    setForm({
+      name: "",
+      barcode: "",
+      category: "",
+      price: "",
+      retail_cost: "",
+      quantity: "",
+      location: "",
+      notes: "",
+    });
+
+    loadItems();
+  };
+
+  // ---------------- SCAN UPDATE ----------------
   const processBarcode = async () => {
     if (!barcode) return;
 
@@ -52,16 +125,17 @@ export default function InventoryTracker() {
 
     if (!data) return;
 
-    const newQty =
+    const updatedQty =
       mode === "add"
         ? data.quantity + 1
         : Math.max(0, data.quantity - 1);
 
     await supabase
       .from("inventory")
-      .update({ quantity: newQty })
+      .update({ quantity: updatedQty })
       .eq("id", data.id);
 
+    feedback();
     setBarcode("");
     loadItems();
   };
@@ -81,14 +155,11 @@ export default function InventoryTracker() {
     await supabase
       .from("inventory")
       .update({
-        name: editing.name,
+        ...editing,
         barcode: Number(editing.barcode),
-        category: editing.category,
         price: Number(editing.price),
         retail_cost: Number(editing.retail_cost),
         quantity: Number(editing.quantity),
-        location: editing.location,
-        notes: editing.notes,
       })
       .eq("id", editing.id);
 
@@ -108,6 +179,7 @@ export default function InventoryTracker() {
         { fps: 10, qrbox: 250 },
         (decodedText) => {
           setBarcode(decodedText);
+          feedback();
 
           scanner.stop().then(() => {
             scanner.clear();
@@ -118,7 +190,6 @@ export default function InventoryTracker() {
     }, 300);
   };
 
-  // ---------------- UI ----------------
   return (
     <div className="min-h-screen bg-gray-100 p-6 space-y-6">
 
@@ -127,14 +198,92 @@ export default function InventoryTracker() {
         <h1 className="text-3xl font-bold">Inventory Tracker</h1>
       </div>
 
-      {/* CONTROL BAR */}
-      <div className="bg-white rounded-2xl shadow p-6 space-y-4">
+      {/* ADD FORM */}
+      <div className="bg-white rounded-2xl shadow p-6 grid grid-cols-3 gap-3">
 
-        {/* MODE */}
-        <div className="flex rounded-xl overflow-hidden w-fit shadow">
+        <input className="border rounded-xl p-3"
+          placeholder="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+
+        <input className="border rounded-xl p-3"
+          placeholder="Barcode"
+          value={form.barcode}
+          onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+        />
+
+        {/* CATEGORY DROPDOWN */}
+        <select
+          className="border rounded-xl p-3"
+          value={form.category}
+          onChange={(e) =>
+            setForm({ ...form, category: e.target.value })
+          }
+        >
+          <option value="">Select Category</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+
+        <input className="border rounded-xl p-3"
+          placeholder="Price"
+          value={form.price}
+          onChange={(e) => setForm({ ...form, price: e.target.value })}
+        />
+
+        <input className="border rounded-xl p-3"
+          placeholder="Retail Cost"
+          value={form.retail_cost}
+          onChange={(e) =>
+            setForm({ ...form, retail_cost: e.target.value })
+          }
+        />
+
+        <input className="border rounded-xl p-3"
+          placeholder="Quantity"
+          value={form.quantity}
+          onChange={(e) =>
+            setForm({ ...form, quantity: e.target.value })
+          }
+        />
+
+        {/* LOCATION DROPDOWN */}
+        <select
+          className="border rounded-xl p-3"
+          value={form.location}
+          onChange={(e) =>
+            setForm({ ...form, location: e.target.value })
+          }
+        >
+          <option value="">Select Location</option>
+          {locations.map((l) => (
+            <option key={l} value={l}>{l}</option>
+          ))}
+        </select>
+
+        <input className="border rounded-xl p-3 col-span-2"
+          placeholder="Notes"
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+        />
+
+        <button
+          onClick={addItem}
+          className="bg-black text-white rounded-xl"
+        >
+          Add Item
+        </button>
+      </div>
+
+      {/* SCANNER */}
+      <div className="bg-white rounded-2xl shadow p-6 space-y-3">
+
+        <div className="flex rounded-xl overflow-hidden w-fit">
           <button
             onClick={() => setMode("add")}
-            className={`px-6 py-2 ${
+            className={`px-5 py-2 ${
               mode === "add"
                 ? "bg-green-500 text-white"
                 : "bg-white"
@@ -145,7 +294,7 @@ export default function InventoryTracker() {
 
           <button
             onClick={() => setMode("remove")}
-            className={`px-6 py-2 ${
+            className={`px-5 py-2 ${
               mode === "remove"
                 ? "bg-red-500 text-white"
                 : "bg-white"
@@ -155,21 +304,20 @@ export default function InventoryTracker() {
           </button>
         </div>
 
-        {/* BARCODE */}
         <div className="flex gap-2">
           <input
             className="border rounded-xl p-3 flex-1"
-            placeholder="Scan or enter barcode"
             value={barcode}
             onChange={(e) => setBarcode(e.target.value)}
             onKeyDown={handleKeyDown}
+            placeholder="Scan barcode"
           />
 
           <button
             onClick={startScanner}
             className="bg-blue-600 text-white px-5 rounded-xl"
           >
-            📷 Camera
+            Camera
           </button>
         </div>
 
@@ -181,19 +329,15 @@ export default function InventoryTracker() {
         </button>
       </div>
 
-      {/* GROUPED TABLES */}
-      {Object.entries(grouped).map(([category, list]) => (
-        <div
-          key={category}
-          className="bg-white rounded-2xl shadow overflow-hidden"
-        >
+      {/* GROUPED TABLE */}
+      {Object.entries(grouped).map(([cat, list]) => (
+        <div key={cat} className="bg-white rounded-2xl shadow">
 
-          <div className="p-4 bg-gray-50 font-bold text-lg">
-            {category}
+          <div className="p-4 font-bold bg-gray-50">
+            {cat}
           </div>
 
           <table className="w-full text-sm">
-
             <thead>
               <tr className="text-left border-b">
                 <th className="p-3">Name</th>
@@ -209,7 +353,7 @@ export default function InventoryTracker() {
 
             <tbody>
               {list.map((i) => (
-                <tr key={i.id} className="border-t hover:bg-gray-50">
+                <tr key={i.id} className="border-t">
 
                   <td className="p-3">{i.name}</td>
                   <td>{i.barcode}</td>
@@ -223,14 +367,14 @@ export default function InventoryTracker() {
 
                     <button
                       onClick={() => setEditing(i)}
-                      className="bg-yellow-400 px-3 py-1 rounded-xl"
+                      className="bg-yellow-400 px-3 rounded-xl"
                     >
                       Edit
                     </button>
 
                     <button
                       onClick={() => deleteItem(i.id)}
-                      className="bg-red-500 text-white px-3 py-1 rounded-xl"
+                      className="bg-red-500 text-white px-3 rounded-xl"
                     >
                       Delete
                     </button>
@@ -247,54 +391,47 @@ export default function InventoryTracker() {
 
       {/* EDIT MODAL */}
       {editing && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
           <div className="bg-white p-6 rounded-2xl w-[500px] space-y-2">
 
-            <h2 className="text-xl font-bold">Edit Item</h2>
+            <h2 className="font-bold text-xl">Edit</h2>
 
-            {Object.keys(editing).map((key) =>
-              key !== "id" ? (
+            {Object.keys(editing).map((k) =>
+              k !== "id" ? (
                 <input
-                  key={key}
+                  key={k}
                   className="border p-2 rounded-xl w-full"
-                  value={editing[key] ?? ""}
+                  value={editing[k] ?? ""}
                   onChange={(e) =>
-                    setEditing({ ...editing, [key]: e.target.value })
+                    setEditing({
+                      ...editing,
+                      [k]: e.target.value,
+                    })
                   }
-                  placeholder={key}
                 />
               ) : null
             )}
 
-            <div className="flex justify-end gap-2 pt-2">
-
-              <button onClick={() => setEditing(null)}>
-                Cancel
-              </button>
-
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEditing(null)}>Cancel</button>
               <button
                 onClick={saveEdit}
                 className="bg-black text-white px-4 py-2 rounded-xl"
               >
                 Save
               </button>
-
             </div>
 
           </div>
         </div>
       )}
 
-      {/* CAMERA */}
+      {/* SCANNER MODAL */}
       {scannerOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
           <div className="bg-white p-4 rounded-2xl w-[90%] max-w-md">
 
-            <h2 className="text-xl font-bold mb-2">Scan Barcode</h2>
-
-            <div id="reader" className="w-full"></div>
+            <div id="reader" />
 
             <button
               onClick={() => setScannerOpen(false)}
@@ -304,7 +441,6 @@ export default function InventoryTracker() {
             </button>
 
           </div>
-
         </div>
       )}
 
