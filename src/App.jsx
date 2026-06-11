@@ -6,6 +6,7 @@ import Portal from "./pages/Portal";
 import FilamentTracker from "./pages/FilamentTracker";
 import InventoryTracker from "./pages/InventoryTracker";
 import Scanner from "./pages/Scanner";
+import BarcodeList from "./pages/BarcodeList";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="filament" element={<FilamentTracker />} />
         <Route path="inventory" element={<InventoryTracker />} />
         <Route path="scanner" element={<Scanner />} />
+        <Route path="barcodes" element={<BarcodeList />} />
 
       </Route>
 

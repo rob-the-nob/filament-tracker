@@ -8,14 +8,14 @@ export default function Sidebar() {
     <div className="w-64 bg-white shadow p-4">
 
       <h1 className="text-xl font-bold mb-6">
-        SaaS Dashboard
+        Filament & Inventory Tracker
       </h1>
 
       <button
         onClick={() => navigate("/")}
         className="block w-full text-left p-2 hover:bg-gray-100 rounded"
       >
-        Portal
+        Home Page
       </button>
 
       <button
@@ -32,6 +32,12 @@ export default function Sidebar() {
         Inventory Tracker
       </button>
 
+      <button
+        onClick={() => navigate("/barcodes")}
+        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
+      >
+        Barcode List
+      </button>
     </div>
   );
 }

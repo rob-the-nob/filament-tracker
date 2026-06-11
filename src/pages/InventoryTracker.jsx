@@ -1,6 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabase";
 import { Html5Qrcode } from "html5-qrcode";
+import LabelPrint from "../components/LabelPrint";
+import ReactDOMServer from "react-dom/server";
+import Navbar from "../components/Navbar";
+import beepSound from "../assets/beep.mp3";
+
 
 export default function InventoryTracker() {
   const [items, setItems] = useState([]);
@@ -9,6 +14,9 @@ export default function InventoryTracker() {
   const [mode, setMode] = useState("remove");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  
+
+  const scanTimeout = useRef(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -21,7 +29,6 @@ export default function InventoryTracker() {
     notes: "",
   });
 
-  // ---------------- DROPDOWNS ----------------
   const categories = [
     "Electronics",
     "Tools",
@@ -42,14 +49,6 @@ export default function InventoryTracker() {
     "Workshop",
   ];
 
-  // ---------------- Barcode Genneration ----------------
-  const generateBarcode = () => {
-    const time = Date.now().toString(); // unique base
-    const random = Math.floor(100 + Math.random() * 900); // 3-digit safety
-
-    return Number(time.slice(-6) + random); // keep it numeric + short-ish
-  };
-
   // ---------------- LOAD ----------------
   const loadItems = async () => {
     const { data, error } = await supabase
@@ -68,34 +67,36 @@ export default function InventoryTracker() {
   const feedback = () => {
     if (navigator.vibrate) navigator.vibrate(120);
 
-    const audio = new Audio(
-      "https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"
-    );
-    audio.play();
+   const audio = new Audio(beepSound);
+    audio.volume = 0.6;
+   audio.play();
   };
 
   // ---------------- GROUP ----------------
   const grouped = useMemo(() => {
     const g = {};
-
     items.forEach((i) => {
       const cat = i.category || "Uncategorised";
       if (!g[cat]) g[cat] = [];
       g[cat].push(i);
     });
-
     return g;
   }, [items]);
 
+  const generateBarcode = () =>
+    Date.now().toString().slice(-8);
+
   // ---------------- ADD ITEM ----------------
   const addItem = async () => {
+    const barcodeValue = form.barcode || generateBarcode();
+
     await supabase.from("inventory").insert([
       {
         ...form,
-        barcode: Number(form.barcode),
-        price: Number(form.price),
-        retail_cost: Number(form.retail_cost),
-        quantity: Number(form.quantity),
+        barcode: Number(barcodeValue),
+        price: Number(form.price || 0),
+        retail_cost: Number(form.retail_cost || 0),
+        quantity: Number(form.quantity || 0),
       },
     ]);
 
@@ -113,14 +114,58 @@ export default function InventoryTracker() {
     loadItems();
   };
 
-  // ---------------- SCAN UPDATE ----------------
-  const processBarcode = async () => {
-    if (!barcode) return;
+  const addAndPrint = async () => {
+    const barcodeValue = form.barcode || generateBarcode();
+
+    const newItem = {
+      ...form,
+      barcode: Number(barcodeValue),
+      price: Number(form.price || 0),
+      retail_cost: Number(form.retail_cost || 0),
+      quantity: Number(form.quantity || 0),
+    };
+
+    const { error } = await supabase
+      .from("inventory")
+      .insert([newItem]);
+
+    if (!error) {
+      printLabel(newItem);
+      loadItems();
+    }
+  };
+
+  const printLabel = (item) => {
+    const win = window.open("", "_blank");
+
+    const html = ReactDOMServer.renderToString(
+      <LabelPrint item={item} />
+    );
+
+    win.document.write(`
+      <html>
+        <head>
+          <style>
+            @page { size: 50mm 25mm; margin: 0; }
+            body { margin: 0; }
+          </style>
+        </head>
+        <body>${html}</body>
+      </html>
+    `);
+
+    win.document.close();
+    setTimeout(() => win.print(), 500);
+  };
+
+  // ---------------- PROCESS BARCODE ----------------
+  const processBarcode = async (scannedValue = barcode) => {
+    if (!scannedValue) return;
 
     const { data } = await supabase
       .from("inventory")
       .select("*")
-      .eq("barcode", Number(barcode))
+      .eq("barcode", Number(scannedValue))
       .single();
 
     if (!data) return;
@@ -138,10 +183,6 @@ export default function InventoryTracker() {
     feedback();
     setBarcode("");
     loadItems();
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") processBarcode();
   };
 
   // ---------------- DELETE ----------------
@@ -179,7 +220,7 @@ export default function InventoryTracker() {
         { fps: 10, qrbox: 250 },
         (decodedText) => {
           setBarcode(decodedText);
-          feedback();
+          processBarcode(decodedText);
 
           scanner.stop().then(() => {
             scanner.clear();
@@ -193,124 +234,34 @@ export default function InventoryTracker() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 space-y-6">
 
+      
       {/* HEADER */}
       <div className="bg-white rounded-2xl shadow p-6">
         <h1 className="text-3xl font-bold">Inventory Tracker</h1>
       </div>
 
-      {/* ADD FORM */}
-      <div className="bg-white rounded-2xl shadow p-6 grid grid-cols-3 gap-3">
+      <div className="flex gap-2">
 
-        <input className="border rounded-xl p-3"
-          placeholder="Name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
+ 
 
-        <input className="border rounded-xl p-3"
-          placeholder="Barcode"
-          value={form.barcode}
-          onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-        />
+  <button
+    onClick={() => window.location.href = "/barcodes"}
+    className="bg-gray-800 text-white px-4 py-2 rounded-xl"
+  >
+    View Barcodes
+  </button>
 
-        {/* CATEGORY DROPDOWN */}
-        <select
-          className="border rounded-xl p-3"
-          value={form.category}
-          onChange={(e) =>
-            setForm({ ...form, category: e.target.value })
-          }
-        >
-          <option value="">Select Category</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-
-        <input className="border rounded-xl p-3"
-          placeholder="Price"
-          value={form.price}
-          onChange={(e) => setForm({ ...form, price: e.target.value })}
-        />
-
-        <input className="border rounded-xl p-3"
-          placeholder="Retail Cost"
-          value={form.retail_cost}
-          onChange={(e) =>
-            setForm({ ...form, retail_cost: e.target.value })
-          }
-        />
-
-        <input className="border rounded-xl p-3"
-          placeholder="Quantity"
-          value={form.quantity}
-          onChange={(e) =>
-            setForm({ ...form, quantity: e.target.value })
-          }
-        />
-
-        {/* LOCATION DROPDOWN */}
-        <select
-          className="border rounded-xl p-3"
-          value={form.location}
-          onChange={(e) =>
-            setForm({ ...form, location: e.target.value })
-          }
-        >
-          <option value="">Select Location</option>
-          {locations.map((l) => (
-            <option key={l} value={l}>{l}</option>
-          ))}
-        </select>
-
-        <input className="border rounded-xl p-3 col-span-2"
-          placeholder="Notes"
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-        />
-
-        <button
-          onClick={addItem}
-          className="bg-black text-white rounded-xl"
-        >
-          Add Item
-        </button>
-      </div>
+</div>
 
       {/* SCANNER */}
-      <div className="bg-white rounded-2xl shadow p-6 space-y-3">
-
-        <div className="flex rounded-xl overflow-hidden w-fit">
-          <button
-            onClick={() => setMode("add")}
-            className={`px-5 py-2 ${
-              mode === "add"
-                ? "bg-green-500 text-white"
-                : "bg-white"
-            }`}
-          >
-            ADD
-          </button>
-
-          <button
-            onClick={() => setMode("remove")}
-            className={`px-5 py-2 ${
-              mode === "remove"
-                ? "bg-red-500 text-white"
-                : "bg-white"
-            }`}
-          >
-            REMOVE
-          </button>
-        </div>
+      <div className="bg-white rounded-2xl shadow p-6 space-y-4">
 
         <div className="flex gap-2">
           <input
             className="border rounded-xl p-3 flex-1"
             value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Scan barcode"
+            onChange={(e) => handleScanChange(e.target.value)}
+            placeholder="Scan barcode (auto detects)"
           />
 
           <button
@@ -321,60 +272,169 @@ export default function InventoryTracker() {
           </button>
         </div>
 
-        <button
-          onClick={processBarcode}
-          className="bg-black text-white px-6 py-2 rounded-xl"
-        >
-          Confirm
-        </button>
+        {/* ADD PRODUCT (RESTORED) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+
+          <input
+            className="border rounded-xl p-2"
+            placeholder="Name"
+            value={form.name}
+            onChange={(e) =>
+              setForm({ ...form, name: e.target.value })
+            }
+          />
+
+          <input
+            className="border rounded-xl p-2"
+            placeholder="Category"
+            value={form.category}
+            onChange={(e) =>
+              setForm({ ...form, category: e.target.value })
+            }
+          />
+
+          <input
+            className="border rounded-xl p-2"
+            placeholder="Price"
+            value={form.price}
+            onChange={(e) =>
+              setForm({ ...form, price: e.target.value })
+            }
+          />
+
+          <input
+            className="border rounded-xl p-2"
+            placeholder="Retail"
+            value={form.retail_cost}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                retail_cost: e.target.value,
+              })
+            }
+          />
+
+          <input
+            className="border rounded-xl p-2"
+            placeholder="Qty"
+            value={form.quantity}
+            onChange={(e) =>
+              setForm({ ...form, quantity: e.target.value })
+            }
+          />
+
+          <input
+            className="border rounded-xl p-2"
+            placeholder="Location"
+            value={form.location}
+            onChange={(e) =>
+              setForm({ ...form, location: e.target.value })
+            }
+          />
+
+        </div>
+
+        <div className="flex gap-3 mt-3">
+
+          <button
+            onClick={addItem}
+            className="bg-black text-white px-5 py-3 rounded-xl"
+          >
+            Add Product
+          </button>
+
+          <button
+            onClick={addAndPrint}
+            className="bg-green-600 text-white px-5 py-3 rounded-xl"
+          >
+            Add & Print Label
+          </button>
+
+        </div>
+
+        {/* MODE */}
+        <div className="flex gap-2 mt-3">
+
+          <button
+            onClick={() => setMode("add")}
+            className={`px-4 py-2 rounded-xl ${
+              mode === "add"
+                ? "bg-green-500 text-white"
+                : "bg-white"
+            }`}
+          >
+            ADD
+          </button>
+
+          <button
+            onClick={() => setMode("remove")}
+            className={`px-4 py-2 rounded-xl ${
+              mode === "remove"
+                ? "bg-red-500 text-white"
+                : "bg-white"
+            }`}
+          >
+            REMOVE
+          </button>
+
+        </div>
+
       </div>
 
-      {/* GROUPED TABLE */}
+      {/* GROUPED LIST */}
       {Object.entries(grouped).map(([cat, list]) => (
-        <div key={cat} className="bg-white rounded-2xl shadow">
+        <div key={cat} className="bg-white rounded-2xl shadow mb-4 overflow-hidden">
 
-          <div className="p-4 font-bold bg-gray-50">
+          <div className="p-4 font-bold bg-gray-50 border-b">
             {cat}
           </div>
 
           <table className="w-full text-sm">
+
             <thead>
-              <tr className="text-left border-b">
+              <tr className="text-left border-b bg-gray-100">
                 <th className="p-3">Name</th>
                 <th>Barcode</th>
                 <th>Qty</th>
                 <th>Price</th>
                 <th>Retail</th>
+                <th>Profit</th>
                 <th>Location</th>
-                <th>Notes</th>
                 <th>Actions</th>
               </tr>
             </thead>
 
             <tbody>
               {list.map((i) => (
-                <tr key={i.id} className="border-t">
+                <tr key={i.id} className="border-b hover:bg-gray-50">
 
                   <td className="p-3">{i.name}</td>
                   <td>{i.barcode}</td>
                   <td>{i.quantity}</td>
-                  <td>£{i.price}</td>
-                  <td>£{i.retail_cost}</td>
+
+                  <td>£{Number(i.price).toFixed(2)}</td>
+                  <td>£{Number(i.retail_cost).toFixed(2)}</td>
+
+                  <td className="font-semibold">
+                    £{(
+                      Number(i.retail_cost) - Number(i.price)
+                    ).toFixed(2)}
+                  </td>
+
                   <td>{i.location}</td>
-                  <td>{i.notes}</td>
 
                   <td className="flex gap-2 p-2">
 
                     <button
                       onClick={() => setEditing(i)}
-                      className="bg-yellow-400 px-3 rounded-xl"
+                      className="bg-yellow-400 px-3 py-1 rounded-xl"
                     >
                       Edit
                     </button>
 
                     <button
                       onClick={() => deleteItem(i.id)}
-                      className="bg-red-500 text-white px-3 rounded-xl"
+                      className="bg-red-500 text-white px-3 py-1 rounded-xl"
                     >
                       Delete
                     </button>
@@ -388,61 +448,6 @@ export default function InventoryTracker() {
           </table>
         </div>
       ))}
-
-      {/* EDIT MODAL */}
-      {editing && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-2xl w-[500px] space-y-2">
-
-            <h2 className="font-bold text-xl">Edit</h2>
-
-            {Object.keys(editing).map((k) =>
-              k !== "id" ? (
-                <input
-                  key={k}
-                  className="border p-2 rounded-xl w-full"
-                  value={editing[k] ?? ""}
-                  onChange={(e) =>
-                    setEditing({
-                      ...editing,
-                      [k]: e.target.value,
-                    })
-                  }
-                />
-              ) : null
-            )}
-
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setEditing(null)}>Cancel</button>
-              <button
-                onClick={saveEdit}
-                className="bg-black text-white px-4 py-2 rounded-xl"
-              >
-                Save
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* SCANNER MODAL */}
-      {scannerOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-          <div className="bg-white p-4 rounded-2xl w-[90%] max-w-md">
-
-            <div id="reader" />
-
-            <button
-              onClick={() => setScannerOpen(false)}
-              className="mt-3 bg-red-500 text-white px-4 py-2 rounded-xl"
-            >
-              Close
-            </button>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );
