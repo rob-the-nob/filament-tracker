@@ -1,72 +1,45 @@
-const printLabel = (item) => {
-  const barcode = String(item.barcode || "");
+import Barcode from "react-barcode";
 
-  const frame = document.createElement("iframe");
+export default function LabelPrint({ item }) {
+  return (
+    <div
+      style={{
+        width: "50mm",
+        height: "25mm",
+        padding: "1mm",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        fontFamily: "Arial",
+        overflow: "hidden",
+      }}
+    >
+      {/* NAME */}
+      <div
+        style={{
+          fontSize: "9px",
+          fontWeight: "bold",
+          textAlign: "center",
+          maxHeight: "6mm",
+          overflow: "hidden",
+        }}
+      >
+        {item.name}
+      </div>
 
-  frame.style.position = "fixed";
-  frame.style.right = "0";
-  frame.style.bottom = "0";
-  frame.style.width = "0";
-  frame.style.height = "0";
-  frame.style.border = "0";
-
-  document.body.appendChild(frame);
-
-  const doc = frame.contentWindow.document;
-
-  doc.open();
-  doc.write(`
-    <html>
-      <head>
-        <title>Print</title>
-
-        <style>
-          @page {
-            size: 50mm 25mm;
-            margin: 0;
-          }
-
-          body {
-            margin: 0;
-            width: 50mm;
-            height: 25mm;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial;
-          }
-
-          .name {
-            font-size: 10px;
-            font-weight: bold;
-            text-align: center;
-            max-height: 8mm;
-            overflow: hidden;
-          }
-
-          .barcode {
-            font-family: monospace;
-            font-size: 16px;
-            letter-spacing: 2px;
-            margin-top: 2mm;
-          }
-        </style>
-      </head>
-
-      <body>
-        <div class="name">${item.name || ""}</div>
-        <div class="barcode">${barcode}</div>
-      </body>
-    </html>
-  `);
-
-  doc.close();
-
-  setTimeout(() => {
-    frame.contentWindow.focus();
-    frame.contentWindow.print();
-
-    document.body.removeChild(frame);
-  }, 300);
-};
+      {/* REAL BARCODE */}
+      <div style={{ transform: "scale(0.85)" }}>
+        <Barcode
+          value={String(item.barcode)}
+          format="CODE128"
+          width={1}
+          height={35}
+          displayValue={true}
+          fontSize={10}
+          margin={0}
+        />
+      </div>
+    </div>
+  );
+}
