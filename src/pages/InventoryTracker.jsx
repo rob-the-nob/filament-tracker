@@ -148,17 +148,24 @@ export default function InventoryTracker() {
   };
 
   // ---------------- PRINT (FIXED - NO POPUP) ----------------
- const printLabel = (item) => {
+const printLabel = (item) => {
   const barcode = String(item.barcode || "");
 
-  const win = window.open("", "_blank");
+  const frame = document.createElement("iframe");
 
-  if (!win) {
-    alert("Popup blocked. Allow popups to print.");
-    return;
-  }
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "0";
+  frame.style.height = "0";
+  frame.style.border = "0";
 
-  win.document.write(`
+  document.body.appendChild(frame);
+
+  const doc = frame.contentWindow.document;
+
+  doc.open();
+  doc.write(`
     <html>
       <head>
         <title>Print</title>
@@ -200,19 +207,18 @@ export default function InventoryTracker() {
       <body>
         <div class="name">${item.name || ""}</div>
         <div class="barcode">${barcode}</div>
-
-        <script>
-          window.onload = function () {
-            window.focus();
-            window.print();
-            window.close();
-          };
-        </script>
       </body>
     </html>
   `);
 
-  win.document.close();
+  doc.close();
+
+  setTimeout(() => {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+
+    document.body.removeChild(frame);
+  }, 300);
 };
 
   // ---------------- PROCESS BARCODE ----------------
