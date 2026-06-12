@@ -30,23 +30,25 @@ export default function InventoryTracker() {
   });
 
   const categories = [
-    "Electronics",
-    "Tools",
-    "3D Printing",
-    "Packaging",
-    "Office",
-    "Raw Materials",
+    "Bags",
+    "Cards",
+    "Christmas",
+    "Clothing",
+    "Cushions",
+    "Drinkware/Bottles",
+    "Ebroidery",
     "Other",
   ];
 
   const locations = [
-    "Main Store",
-    "Warehouse",
-    "Shelf A",
-    "Shelf B",
-    "Drawer 1",
-    "Drawer 2",
-    "Workshop",
+    "Kalax",
+    "Office Cupboards",
+    "Right Shelf",
+    "Left Shelf",
+    "White Boxes",
+    "Large Boxes",
+    "Loft",
+    "Anywhere Mum Wants",
   ];
 
   // ---------------- LOAD ----------------
@@ -307,14 +309,21 @@ export default function InventoryTracker() {
             }
           />
 
-          <input
-            className="border rounded-xl p-2"
-            placeholder="Category"
+          <select
+            className="border rounded-xl p-3"
             value={form.category}
             onChange={(e) =>
               setForm({ ...form, category: e.target.value })
             }
-          />
+          >
+            <option value="">Select Category</option>
+            
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
 
           <input
             className="border rounded-xl p-2"
@@ -346,14 +355,21 @@ export default function InventoryTracker() {
             }
           />
 
-          <input
-            className="border rounded-xl p-2"
-            placeholder="Location"
+          <select
+            className="border rounded-xl p-3"
             value={form.location}
             onChange={(e) =>
               setForm({ ...form, location: e.target.value })
             }
-          />
+          >
+            <option value="">Select Location</option>
+            
+            {locations.map((location) => (
+              <option key={location} value={location}>
+                {location}
+              </option>
+            ))}
+          </select>
 
         </div>
 
