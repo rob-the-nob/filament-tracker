@@ -86,7 +86,7 @@ export default function InventoryTracker() {
   const generateBarcode = () =>
     Date.now().toString().slice(-8);
 
-  // ---------------- SCAN INPUT FIX ----------------
+  // ---------------- SCAN INPUT ----------------
   const handleScanChange = (value) => {
     setBarcode(value);
 
@@ -147,37 +147,50 @@ export default function InventoryTracker() {
     }
   };
 
-  // ---------------- PRINT (FIXED) ----------------
+  // ---------------- PRINT (FIXED - NO POPUP) ----------------
   const printLabel = (item) => {
-    const win = window.open("", "_blank", "width=400,height=200");
-
     const html = ReactDOMServer.renderToString(
       <LabelPrint item={item} />
     );
 
-    win.document.open();
-    win.document.write(`
+    const iframe = document.createElement("iframe");
+
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+
+    doc.open();
+    doc.write(`
       <html>
         <head>
-          <title>Print Label</title>
           <style>
             @page { size: 50mm 25mm; margin: 0; }
-            body { margin: 0; display:flex; justify-content:center; align-items:center; }
+            body {
+              margin: 0;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
           </style>
         </head>
-        <body>
-          ${html}
-        </body>
+        <body>${html}</body>
       </html>
     `);
-
-    win.document.close();
+    doc.close();
 
     setTimeout(() => {
-      win.focus();
-      win.print();
-      win.close();
-    }, 900);
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      document.body.removeChild(iframe);
+    }, 500);
   };
 
   // ---------------- PROCESS BARCODE ----------------
@@ -256,27 +269,23 @@ export default function InventoryTracker() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 space-y-6">
 
-      {/* SCANNER RENDER FIX */}
       {scannerOpen && (
         <div id="reader" className="w-full h-80" />
       )}
 
-      {/* HEADER */}
       <div className="bg-white rounded-2xl shadow p-6">
         <h1 className="text-3xl font-bold">Inventory Tracker</h1>
       </div>
 
-      {/* VIEW BARCODES */}
       <div className="flex gap-2">
         <button
-          onClick={() => (window.location.href = "/barcodes")}
+          onClick={() => window.location.href = "/barcodes"}
           className="bg-gray-800 text-white px-4 py-2 rounded-xl"
         >
           View Barcodes
         </button>
       </div>
 
-      {/* SCANNER + INPUT */}
       <div className="bg-white rounded-2xl shadow p-6 space-y-4">
 
         <div className="flex gap-2">
@@ -284,7 +293,7 @@ export default function InventoryTracker() {
             className="border rounded-xl p-3 flex-1"
             value={barcode}
             onChange={(e) => handleScanChange(e.target.value)}
-            placeholder="Scan barcode (auto detects)"
+            placeholder="Scan barcode"
           />
 
           <button
@@ -295,7 +304,6 @@ export default function InventoryTracker() {
           </button>
         </div>
 
-        {/* FORM */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
 
           <input
@@ -316,9 +324,7 @@ export default function InventoryTracker() {
           >
             <option value="">Select Category</option>
             {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
 
@@ -358,15 +364,12 @@ export default function InventoryTracker() {
           >
             <option value="">Select Location</option>
             {locations.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
+              <option key={l} value={l}>{l}</option>
             ))}
           </select>
 
         </div>
 
-        {/* ACTION BUTTONS */}
         <div className="flex gap-3 mt-3">
           <button
             onClick={addItem}
@@ -383,14 +386,11 @@ export default function InventoryTracker() {
           </button>
         </div>
 
-        {/* MODE */}
         <div className="flex gap-2 mt-3">
           <button
             onClick={() => setMode("add")}
             className={`px-4 py-2 rounded-xl ${
-              mode === "add"
-                ? "bg-green-500 text-white"
-                : "bg-white"
+              mode === "add" ? "bg-green-500 text-white" : "bg-white"
             }`}
           >
             ADD
@@ -399,9 +399,7 @@ export default function InventoryTracker() {
           <button
             onClick={() => setMode("remove")}
             className={`px-4 py-2 rounded-xl ${
-              mode === "remove"
-                ? "bg-red-500 text-white"
-                : "bg-white"
+              mode === "remove" ? "bg-red-500 text-white" : "bg-white"
             }`}
           >
             REMOVE
@@ -410,7 +408,6 @@ export default function InventoryTracker() {
 
       </div>
 
-      {/* GROUPED LIST */}
       {Object.entries(grouped).map(([cat, list]) => (
         <div key={cat} className="bg-white rounded-2xl shadow mb-4 overflow-hidden">
 
@@ -435,14 +432,13 @@ export default function InventoryTracker() {
             <tbody>
               {list.map((i) => (
                 <tr key={i.id} className="border-b hover:bg-gray-50">
+
                   <td className="p-3">{i.name}</td>
                   <td>{i.barcode}</td>
                   <td>{i.quantity}</td>
                   <td>£{Number(i.price).toFixed(2)}</td>
                   <td>£{Number(i.retail_cost).toFixed(2)}</td>
-                  <td className="font-semibold">
-                    £{(Number(i.retail_cost) - Number(i.price)).toFixed(2)}
-                  </td>
+                  <td>£{(Number(i.retail_cost) - Number(i.price)).toFixed(2)}</td>
                   <td>{i.location}</td>
 
                   <td className="flex gap-2 p-2">
@@ -460,11 +456,12 @@ export default function InventoryTracker() {
                       Delete
                     </button>
                   </td>
+
                 </tr>
               ))}
             </tbody>
-
           </table>
+
         </div>
       ))}
     </div>
