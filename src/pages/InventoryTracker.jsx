@@ -148,50 +148,72 @@ export default function InventoryTracker() {
   };
 
   // ---------------- PRINT (FIXED - NO POPUP) ----------------
-  const printLabel = (item) => {
-    const html = ReactDOMServer.renderToString(
-      <LabelPrint item={item} />
-    );
+ const printLabel = (item) => {
+  const barcode = String(item.barcode || "");
 
-    const iframe = document.createElement("iframe");
+  const win = window.open("", "_blank");
 
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
+  if (!win) {
+    alert("Popup blocked. Allow popups to print.");
+    return;
+  }
 
-    document.body.appendChild(iframe);
+  win.document.write(`
+    <html>
+      <head>
+        <title>Print</title>
 
-    const doc = iframe.contentWindow.document;
+        <style>
+          @page {
+            size: 50mm 25mm;
+            margin: 0;
+          }
 
-    doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <style>
-            @page { size: 50mm 25mm; margin: 0; }
-            body {
-              margin: 0;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-            }
-          </style>
-        </head>
-        <body>${html}</body>
-      </html>
-    `);
-    doc.close();
+          body {
+            margin: 0;
+            width: 50mm;
+            height: 25mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial;
+          }
 
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
+          .name {
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            max-height: 8mm;
+            overflow: hidden;
+          }
 
-      document.body.removeChild(iframe);
-    }, 500);
-  };
+          .barcode {
+            font-family: monospace;
+            font-size: 16px;
+            letter-spacing: 2px;
+            margin-top: 2mm;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="name">${item.name || ""}</div>
+        <div class="barcode">${barcode}</div>
+
+        <script>
+          window.onload = function () {
+            window.focus();
+            window.print();
+            window.close();
+          };
+        </script>
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+};
 
   // ---------------- PROCESS BARCODE ----------------
   const processBarcode = async (scannedValue = barcode) => {
