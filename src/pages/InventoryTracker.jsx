@@ -135,28 +135,51 @@ export default function InventoryTracker() {
     }
   };
 
-  const printLabel = (item) => {
-    const win = window.open("", "_blank");
+ const printLabel = (item) => {
+  const win = window.open("", "_blank", "width=400,height=200");
 
-    const html = ReactDOMServer.renderToString(
+  const html = ReactDOMServer.renderToString(
+    <div id="print-root">
       <LabelPrint item={item} />
-    );
+    </div>
+  );
 
-    win.document.write(`
-      <html>
-        <head>
-          <style>
-            @page { size: 50mm 25mm; margin: 0; }
-            body { margin: 0; }
-          </style>
-        </head>
-        <body>${html}</body>
-      </html>
-    `);
+  win.document.open();
+  win.document.write(`
+    <html>
+      <head>
+        <title>Print Label</title>
 
-    win.document.close();
-    setTimeout(() => win.print(), 500);
+        <style>
+          @page {
+            size: 50mm 25mm;
+            margin: 0;
+          }
+
+          body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+        </style>
+
+      </head>
+
+      <body>
+        <div id="root">${html}</div>
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+
+  win.onload = () => {
+    win.focus();
+    win.print();
+    win.close();
   };
+};
 
   // ---------------- PROCESS BARCODE ----------------
   const processBarcode = async (scannedValue = barcode) => {
