@@ -145,7 +145,7 @@ export default function InventoryTracker() {
       <LabelPrint item={item} />
     </div>
   );
-
+  
   win.document.open();
   win.document.write(`
     <html>
