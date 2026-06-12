@@ -1,6 +1,6 @@
-import Barcode from "react-barcode";
-
 export default function LabelPrint({ item }) {
+  const barcode = String(item.barcode || "");
+
   return (
     <div
       style={{
@@ -15,13 +15,12 @@ export default function LabelPrint({ item }) {
         overflow: "hidden",
       }}
     >
-      {/* PRODUCT NAME */}
+      {/* NAME */}
       <div
         style={{
-          textAlign: "center",
           fontSize: "10px",
           fontWeight: "bold",
-          lineHeight: "1.1",
+          textAlign: "center",
           maxHeight: "8mm",
           overflow: "hidden",
         }}
@@ -29,18 +28,23 @@ export default function LabelPrint({ item }) {
         {item.name}
       </div>
 
-      {/* BARCODE */}
-      <div style={{ transform: "scale(0.85)", transformOrigin: "center" }}>
-        <Barcode
-          value={String(item.barcode)}
-          format="CODE128"
-          width={1}
-          height={35}
-          displayValue={true}
-          fontSize={10}
-          margin={0}
-        />
-      </div>
+      {/* SVG BARCODE (RELIABLE IN PRINT) */}
+      <svg
+        width="100%"
+        height="14mm"
+        viewBox="0 0 200 50"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <text
+          x="50%"
+          y="30"
+          textAnchor="middle"
+          fontSize="14"
+          fontFamily="monospace"
+        >
+          {barcode}
+        </text>
+      </svg>
     </div>
   );
 }
