@@ -1,13 +1,17 @@
 const printLabel = (item) => {
-  const barcode = String(item.barcode);
+  const barcode = String(item.barcode || "");
 
-  const printWindow = window.open("", "_blank", "width=400,height=200");
+  const win = window.open("", "_blank");
 
-  printWindow.document.open();
-  printWindow.document.write(`
+  if (!win) {
+    alert("Popup blocked. Allow popups to print.");
+    return;
+  }
+
+  win.document.write(`
     <html>
       <head>
-        <title>Print Label</title>
+        <title>Print</title>
 
         <style>
           @page {
@@ -36,7 +40,8 @@ const printLabel = (item) => {
 
           .barcode {
             font-family: monospace;
-            font-size: 14px;
+            font-size: 16px;
+            letter-spacing: 2px;
             margin-top: 2mm;
           }
         </style>
@@ -45,15 +50,17 @@ const printLabel = (item) => {
       <body>
         <div class="name">${item.name || ""}</div>
         <div class="barcode">${barcode}</div>
+
+        <script>
+          window.onload = function () {
+            window.focus();
+            window.print();
+            window.close();
+          };
+        </script>
       </body>
     </html>
   `);
 
-  printWindow.document.close();
-
-  printWindow.onload = () => {
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-  };
+  win.document.close();
 };
