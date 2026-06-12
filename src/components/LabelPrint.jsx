@@ -9,27 +9,38 @@ export default function LabelPrint({ item }) {
         padding: "2mm",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between",
+        justifyContent: "center",
+        alignItems: "center",
+        fontFamily: "Arial",
+        overflow: "hidden",
       }}
     >
+      {/* PRODUCT NAME */}
       <div
         style={{
           textAlign: "center",
-          fontSize: "12px",
+          fontSize: "10px",
           fontWeight: "bold",
+          lineHeight: "1.1",
+          maxHeight: "8mm",
           overflow: "hidden",
         }}
       >
         {item.name}
       </div>
 
-      <Barcode
-        value={String(item.barcode)}
-        format="CODE128"
-        width={1}
-        height={30}
-        displayValue={true}
-      />
+      {/* BARCODE */}
+      <div style={{ transform: "scale(0.85)", transformOrigin: "center" }}>
+        <Barcode
+          value={String(item.barcode)}
+          format="CODE128"
+          width={1}
+          height={35}
+          displayValue={true}
+          fontSize={10}
+          margin={0}
+        />
+      </div>
     </div>
   );
 }
