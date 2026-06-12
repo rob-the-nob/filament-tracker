@@ -7,30 +7,50 @@ import ReactDOMServer from "react-dom/server";
 export default function BarcodeList() {
   const [items, setItems] = useState([]);
 
-  const printLabel = (item) => {
-  const win = window.open("", "_blank");
+ const printLabel = (item) => {
+  const win = window.open("", "_blank", "width=400,height=200");
 
   const html = ReactDOMServer.renderToString(
-    <LabelPrint item={item} />
+    <div id="print-root">
+      <LabelPrint item={item} />
+    </div>
   );
 
+  win.document.open();
   win.document.write(`
     <html>
       <head>
+        <title>Print Label</title>
+
         <style>
-          @page { size: 50mm 25mm; margin: 0; }
-          body { margin: 0; }
+          @page {
+            size: 50mm 25mm;
+            margin: 0;
+          }
+
+          body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
         </style>
+
       </head>
-      <body>${html}</body>
+
+      <body>
+        <div id="root">${html}</div>
+      </body>
     </html>
   `);
 
   win.document.close();
 
-  setTimeout(() => {
+  win.onload = () => {
+    win.focus();
     win.print();
-  }, 500);
+    win.close();
+  };
 };
 
   useEffect(() => {
