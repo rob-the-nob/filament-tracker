@@ -6,7 +6,6 @@ import ReactDOMServer from "react-dom/server";
 import Navbar from "../components/Navbar";
 import beepSound from "../assets/beep.mp3";
 
-
 export default function InventoryTracker() {
   const [items, setItems] = useState([]);
 
@@ -14,7 +13,6 @@ export default function InventoryTracker() {
   const [mode, setMode] = useState("remove");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  
 
   const scanTimeout = useRef(null);
 
@@ -69,9 +67,9 @@ export default function InventoryTracker() {
   const feedback = () => {
     if (navigator.vibrate) navigator.vibrate(120);
 
-   const audio = new Audio(beepSound);
+    const audio = new Audio(beepSound);
     audio.volume = 0.6;
-   audio.play();
+    audio.play();
   };
 
   // ---------------- GROUP ----------------
@@ -87,6 +85,17 @@ export default function InventoryTracker() {
 
   const generateBarcode = () =>
     Date.now().toString().slice(-8);
+
+  // ---------------- SCAN INPUT FIX ----------------
+  const handleScanChange = (value) => {
+    setBarcode(value);
+
+    if (scanTimeout.current) clearTimeout(scanTimeout.current);
+
+    scanTimeout.current = setTimeout(() => {
+      if (value) processBarcode(value);
+    }, 180);
+  };
 
   // ---------------- ADD ITEM ----------------
   const addItem = async () => {
@@ -116,6 +125,7 @@ export default function InventoryTracker() {
     loadItems();
   };
 
+  // ---------------- ADD + PRINT ----------------
   const addAndPrint = async () => {
     const barcodeValue = form.barcode || generateBarcode();
 
@@ -137,51 +147,38 @@ export default function InventoryTracker() {
     }
   };
 
- const printLabel = (item) => {
-  const win = window.open("", "_blank", "width=400,height=200");
+  // ---------------- PRINT (FIXED) ----------------
+  const printLabel = (item) => {
+    const win = window.open("", "_blank", "width=400,height=200");
 
-  const html = ReactDOMServer.renderToString(
-    <div id="print-root">
+    const html = ReactDOMServer.renderToString(
       <LabelPrint item={item} />
-    </div>
-  );
-  
-  win.document.open();
-  win.document.write(`
-    <html>
-      <head>
-        <title>Print Label</title>
+    );
 
-        <style>
-          @page {
-            size: 50mm 25mm;
-            margin: 0;
-          }
+    win.document.open();
+    win.document.write(`
+      <html>
+        <head>
+          <title>Print Label</title>
+          <style>
+            @page { size: 50mm 25mm; margin: 0; }
+            body { margin: 0; display:flex; justify-content:center; align-items:center; }
+          </style>
+        </head>
+        <body>
+          ${html}
+        </body>
+      </html>
+    `);
 
-          body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-        </style>
+    win.document.close();
 
-      </head>
-
-      <body>
-        <div id="root">${html}</div>
-      </body>
-    </html>
-  `);
-
-  win.document.close();
-
-  win.onload = () => {
-    win.focus();
-    win.print();
-    win.close();
+    setTimeout(() => {
+      win.focus();
+      win.print();
+      win.close();
+    }, 900);
   };
-};
 
   // ---------------- PROCESS BARCODE ----------------
   const processBarcode = async (scannedValue = barcode) => {
@@ -259,26 +256,27 @@ export default function InventoryTracker() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 space-y-6">
 
-      
+      {/* SCANNER RENDER FIX */}
+      {scannerOpen && (
+        <div id="reader" className="w-full h-80" />
+      )}
+
       {/* HEADER */}
       <div className="bg-white rounded-2xl shadow p-6">
         <h1 className="text-3xl font-bold">Inventory Tracker</h1>
       </div>
 
+      {/* VIEW BARCODES */}
       <div className="flex gap-2">
+        <button
+          onClick={() => (window.location.href = "/barcodes")}
+          className="bg-gray-800 text-white px-4 py-2 rounded-xl"
+        >
+          View Barcodes
+        </button>
+      </div>
 
- 
-
-  <button
-    onClick={() => window.location.href = "/barcodes"}
-    className="bg-gray-800 text-white px-4 py-2 rounded-xl"
-  >
-    View Barcodes
-  </button>
-
-</div>
-
-      {/* SCANNER */}
+      {/* SCANNER + INPUT */}
       <div className="bg-white rounded-2xl shadow p-6 space-y-4">
 
         <div className="flex gap-2">
@@ -297,7 +295,7 @@ export default function InventoryTracker() {
           </button>
         </div>
 
-        {/* ADD PRODUCT (RESTORED) */}
+        {/* FORM */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
 
           <input
@@ -317,7 +315,6 @@ export default function InventoryTracker() {
             }
           >
             <option value="">Select Category</option>
-            
             {categories.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -339,10 +336,7 @@ export default function InventoryTracker() {
             placeholder="Retail"
             value={form.retail_cost}
             onChange={(e) =>
-              setForm({
-                ...form,
-                retail_cost: e.target.value,
-              })
+              setForm({ ...form, retail_cost: e.target.value })
             }
           />
 
@@ -363,18 +357,17 @@ export default function InventoryTracker() {
             }
           >
             <option value="">Select Location</option>
-            
-            {locations.map((location) => (
-              <option key={location} value={location}>
-                {location}
+            {locations.map((l) => (
+              <option key={l} value={l}>
+                {l}
               </option>
             ))}
           </select>
 
         </div>
 
+        {/* ACTION BUTTONS */}
         <div className="flex gap-3 mt-3">
-
           <button
             onClick={addItem}
             className="bg-black text-white px-5 py-3 rounded-xl"
@@ -388,12 +381,10 @@ export default function InventoryTracker() {
           >
             Add & Print Label
           </button>
-
         </div>
 
         {/* MODE */}
         <div className="flex gap-2 mt-3">
-
           <button
             onClick={() => setMode("add")}
             className={`px-4 py-2 rounded-xl ${
@@ -415,7 +406,6 @@ export default function InventoryTracker() {
           >
             REMOVE
           </button>
-
         </div>
 
       </div>
@@ -429,7 +419,6 @@ export default function InventoryTracker() {
           </div>
 
           <table className="w-full text-sm">
-
             <thead>
               <tr className="text-left border-b bg-gray-100">
                 <th className="p-3">Name</th>
@@ -446,24 +435,17 @@ export default function InventoryTracker() {
             <tbody>
               {list.map((i) => (
                 <tr key={i.id} className="border-b hover:bg-gray-50">
-
                   <td className="p-3">{i.name}</td>
                   <td>{i.barcode}</td>
                   <td>{i.quantity}</td>
-
                   <td>£{Number(i.price).toFixed(2)}</td>
                   <td>£{Number(i.retail_cost).toFixed(2)}</td>
-
                   <td className="font-semibold">
-                    £{(
-                      Number(i.retail_cost) - Number(i.price)
-                    ).toFixed(2)}
+                    £{(Number(i.retail_cost) - Number(i.price)).toFixed(2)}
                   </td>
-
                   <td>{i.location}</td>
 
                   <td className="flex gap-2 p-2">
-
                     <button
                       onClick={() => setEditing(i)}
                       className="bg-yellow-400 px-3 py-1 rounded-xl"
@@ -477,9 +459,7 @@ export default function InventoryTracker() {
                     >
                       Delete
                     </button>
-
                   </td>
-
                 </tr>
               ))}
             </tbody>
@@ -487,7 +467,6 @@ export default function InventoryTracker() {
           </table>
         </div>
       ))}
-
     </div>
   );
 }
