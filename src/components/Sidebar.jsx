@@ -38,6 +38,20 @@ export default function Sidebar() {
       >
         Barcode List
       </button>
+
+      <button
+        onClick={() => navigate("/pos")}
+        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
+      >
+        POS System
+      </button>
+
+      <button
+        onClick={() => navigate("/inventory-adjust")}
+        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
+      >
+        Inventory Adjuster
+      </button>
     </div>
   );
 }

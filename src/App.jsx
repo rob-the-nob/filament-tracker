@@ -3,10 +3,12 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Portal from "./pages/Portal";
-import FilamentTracker from "./pages/FilamentTracker";
 import InventoryTracker from "./pages/InventoryTracker";
+import InventoryAdjuster from "./pages/InventoryAdjuster";
+import FilamentTracker from "./pages/FilamentTracker";
 import Scanner from "./pages/Scanner";
 import BarcodeList from "./pages/BarcodeList";
+import POS from "./pages/POS";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -22,11 +24,7 @@ const ProtectedRoute = ({ children }) => {
 export default function App() {
   return (
     <Routes>
-
-      {/* LOGIN */}
       <Route path="/login" element={<Login />} />
-
-      {/* DASHBOARD WRAPPER (IMPORTANT - DO NOT REMOVE) */}
       <Route
         path="/"
         element={
@@ -35,15 +33,14 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-
         <Route index element={<Portal />} />
-        <Route path="filament" element={<FilamentTracker />} />
         <Route path="inventory" element={<InventoryTracker />} />
+        <Route path="inventory-adjust" element={<InventoryAdjuster />} />
+        <Route path="filament" element={<FilamentTracker />} />
         <Route path="scanner" element={<Scanner />} />
-        <Route path="barcodes" element={<BarcodeList />} />
-
+        <Route path="barcode-list" element={<BarcodeList />} />
+        <Route path="pos" element={<POS />} />
       </Route>
-
     </Routes>
   );
-}
+} 
