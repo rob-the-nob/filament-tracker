@@ -20,7 +20,7 @@ export default function Portal() {
 
         {/* INVENTORY */}
         <button
-          onClick={() => window.location.href = "/inventory"}
+          onClick={() => window.location.href = "/InventoryTracker"}
           className="bg-white p-6 rounded-2xl shadow hover:bg-gray-50 text-left"
         >
           <div className="text-xl font-bold">
@@ -33,7 +33,7 @@ export default function Portal() {
 
         {/* FILAMENT */}
         <button
-          onClick={() => window.location.href = "/filament"}
+          onClick={() => window.location.href = "/FilamentTracker"}
           className="bg-white p-6 rounded-2xl shadow hover:bg-gray-50 text-left"
         >
           <div className="text-xl font-bold">
@@ -46,7 +46,7 @@ export default function Portal() {
 
         {/* POS */}
         <button
-          onClick={() => window.location.href = "/pos"}
+          onClick={() => window.location.href = "/POS"}
           className="bg-white p-6 rounded-2xl shadow hover:bg-gray-50 text-left"
         >
           <div className="text-xl font-bold">
@@ -58,7 +58,7 @@ export default function Portal() {
         </button>
 
         <button
-          onClick={() => window.location.href = "/inventory-adjust"}
+          onClick={() => window.location.href = "/InventoryAdjuster"}
           className="bg-white p-6 rounded-2xl shadow hover:bg-gray-50 text-left"
         >
           <div className="text-xl font-bold">
