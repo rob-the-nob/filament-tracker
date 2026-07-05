@@ -9,6 +9,7 @@ import FilamentTracker from "./pages/FilamentTracker";
 import Scanner from "./pages/Scanner";
 import BarcodeList from "./pages/BarcodeList";
 import POS from "./pages/POS";
+import AccountSettings from "./pages/AccountSettings";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="scanner" element={<Scanner />} />
         <Route path="barcode-list" element={<BarcodeList />} />
         <Route path="pos" element={<POS />} />
+        <Route path="account" element={<AccountSettings />} />
       </Route>
     </Routes>
   );

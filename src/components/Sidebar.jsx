@@ -5,53 +5,53 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   return (
-    <div className="w-64 bg-white shadow p-4">
+    <div className="h-full w-64 bg-white border-r flex flex-col">
 
-      <h1 className="text-xl font-bold mb-6">
-        Filament & Inventory Tracker
-      </h1>
+      {/* HEADER */}
+      <div className="p-4 font-bold text-lg border-b">
+        POS SYSTEM
+      </div>
 
-      <button
-        onClick={() => navigate("/")}
-        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
-      >
-        Home Page
-      </button>
+      {/* SCROLLABLE MENU */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
 
-      <button
-        onClick={() => navigate("/filament")}
-        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
-      >
-        Filament Tracker
-      </button>
+        <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
+          onClick={() => navigate("/")}>
+          Portal
+        </button>
 
-      <button
-        onClick={() => navigate("/inventory")}
-        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
-      >
-        Inventory Tracker
-      </button>
+        <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
+          onClick={() => navigate("/filament")}>
+          Filament
+        </button>
 
-      <button
-        onClick={() => navigate("/barcodes")}
-        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
-      >
-        Barcode List
-      </button>
+        <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
+          onClick={() => navigate("/inventory")}>
+          Inventory
+        </button>
 
-      <button
-        onClick={() => navigate("/pos")}
-        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
-      >
-        POS System
-      </button>
+        <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
+          onClick={() => navigate("/scanner")}>
+          Scanner
+        </button>
 
-      <button
-        onClick={() => navigate("/inventory-adjust")}
-        className="block w-full text-left p-2 hover:bg-gray-100 rounded"
-      >
-        Inventory Adjuster
-      </button>
+        <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
+          onClick={() => navigate("/barcodes")}>
+          Barcodes
+        </button>
+
+        <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
+          onClick={() => navigate("/pos")}>
+          POS
+        </button>
+
+        <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
+          onClick={() => navigate("/account")}>
+          Account
+        </button>
+
+      </div>
+
     </div>
   );
 }
