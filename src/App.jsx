@@ -7,7 +7,7 @@ import InventoryTracker from "./pages/InventoryTracker";
 import InventoryAdjuster from "./pages/InventoryAdjuster";
 import FilamentTracker from "./pages/FilamentTracker";
 import Scanner from "./pages/Scanner";
-import BarcodeList from "./pages/BarcodeList";
+import Barcodes from "./pages/BarcodeList";
 import POS from "./pages/POS";
 import AccountSettings from "./pages/AccountSettings";
 
