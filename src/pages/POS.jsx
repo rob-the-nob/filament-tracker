@@ -108,21 +108,29 @@ export default function POS() {
 
   // ---------------- SCANNER ----------------
   const handleScan = (value) => {
-    setBarcode(value);
+  setBarcode(value);
 
-    if (scanTimeout.current) clearTimeout(scanTimeout.current);
+  if (scanTimeout.current) clearTimeout(scanTimeout.current);
 
-    scanTimeout.current = setTimeout(() => {
-      const match = items.find(
-        (i) => String(i.barcode) === String(value)
-      );
+  scanTimeout.current = setTimeout(async () => {
+    if (!value) return;
 
-      if (match) addToBasket(match);
+    const match = items.find(
+      (i) => String(i.barcode) === String(value)
+    );
 
+    if (!match) {
       setBarcode("");
       refocusBarcode();
-    }, 120);
-  };
+      return;
+    }
+
+    await addToBasket(match);
+
+    setBarcode("");
+    refocusBarcode();
+  }, 120);
+};
 
   // ---------------- CASH KEYPAD ----------------
   const addCash = (val) => {
@@ -232,14 +240,14 @@ export default function POS() {
         ))}
       </div>
 
-      <input
-        ref={barcodeRef}
-        className="border p-2 rounded w-full mt-2"
-        placeholder="Scan barcode..."
-        value={barcode}
-        onChange={(e) => handleScan(e.target.value)}
-      />
-
+        <input
+          ref={barcodeRef}
+          className="border p-2 rounded w-full"
+          placeholder="Scan barcode..."
+          value={barcode}
+          onChange={(e) => handleScan(e.target.value)}
+        />
+        
       <div className="flex justify-between font-bold text-xl mt-2">
         <span>Total</span>
         <span>£{total.toFixed(2)}</span>

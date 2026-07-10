@@ -32,7 +32,7 @@ export default function Sidebar() {
 
         <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
           onClick={() => navigate("/scanner")}>
-          Scanner
+          Inventory Adjuster
         </button>
 
         <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
