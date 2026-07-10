@@ -36,7 +36,7 @@ export default function Sidebar() {
         </button>
 
         <button className="w-full text-left p-2 rounded bg-gray-100 hover:bg-gray-200"
-          onClick={() => navigate("/barcodes")}>
+          onClick={() => navigate("/barcode-list")}>
           Barcodes (Needs Fixing)
         </button>
 
