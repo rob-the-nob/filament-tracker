@@ -12,7 +12,6 @@ export default function POS() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [cashReceived, setCashReceived] = useState("");
 
-  const scanTimeout = useRef(null);
   const barcodeRef = useRef(null);
 
   // ---------------- AUTO FOCUS ----------------
@@ -20,9 +19,6 @@ export default function POS() {
     barcodeRef.current?.focus();
   }, []);
 
-  const refocusBarcode = () => {
-    setTimeout(() => barcodeRef.current?.focus(), 50);
-  };
 
   // ---------------- LOAD ITEMS ----------------
   const loadItems = async () => {
@@ -106,32 +102,11 @@ export default function POS() {
     0
   );
 
-  // ---------------- SCANNER ----------------
-  const handleScan = (value) => {
-  setBarcode(value);
-
-  if (scanTimeout.current) clearTimeout(scanTimeout.current);
-
-  scanTimeout.current = setTimeout(async () => {
-    if (!value) return;
-
-    const match = items.find(
-      (i) => String(i.barcode) === String(value)
-    );
-
-    if (!match) {
-      setBarcode("");
-      refocusBarcode();
-      return;
-    }
-
-    await addToBasket(match);
-
-    setBarcode("");
-    refocusBarcode();
-  }, 120);
+ // ---------------- SCANNER ----------------
+  const handleScan = (e) => {
+  console.log("Key:", e.key);
+  console.log("Current value:", e.target.value);
 };
-
   // ---------------- CASH KEYPAD ----------------
   const addCash = (val) => {
     setCashReceived((prev) => {
@@ -204,7 +179,6 @@ export default function POS() {
             key={item.id}
             onClick={() => {
               addToBasket(item);
-              refocusBarcode();
             }}
             className="bg-gray-100 p-3 rounded"
           >
@@ -240,13 +214,15 @@ export default function POS() {
         ))}
       </div>
 
-        <input
-          ref={barcodeRef}
-          className="border p-2 rounded w-full"
-          placeholder="Scan barcode..."
-          value={barcode}
-          onChange={(e) => handleScan(e.target.value)}
-        />
+      <input
+        ref={barcodeRef}
+        className="border p-2 rounded w-full"
+        placeholder="Scan barcode..."
+        defaultValue=""
+        onInput={(e) => {
+          console.log(e.target.value);
+        }}
+      />
         
       <div className="flex justify-between font-bold text-xl mt-2">
         <span>Total</span>
